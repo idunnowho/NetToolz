@@ -1,15 +1,45 @@
 import socket
+import threading
 
-HOST = 'localhost'
-PORT = 4323
+def handle_client(client_socket, addr):
+    try:
+        while True:
+            request = client_socket.recv(1024).decode("utf-8")
+            if request.lower() == "close":
+                client_socket.send("closed".encode("utf-8"))
+                break
+            print(f"Received: {request}")
+            response = "accepted"
+            client_socket.send(response.encode("utf-8"))
+    except Exception as e:
+        print(f"Error when handling client: {e}")
+    finally:
+        client_socket.close()
+        print(f"Connection to client {addr[0]}:{addr[1]} closed")
 
-# Socket using IPV4 and TCP Protocol
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-# Bind socket
-sock.bind((HOST, PORT))
+def run_server():
+    server_ip = '127.0.0.1'
+    port = 8000
 
+    try:
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-sock.listen()
+        server.bind((server_ip, port))
 
-# WOrking On It....
+        server.listen()
+        print(f"Listening on {server_ip}:{port}")
+
+        while True:
+            # accept client connections
+            client_socket, addr = server.accept()
+            print(f"Accepted connection from {addr[0]}:{addr[1]}")
+            # start a new thread for more connections 
+            thread = threading.Thread(target=handle_client, args=(client_socket, addr))
+            thread.start()
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        server.close()
+
+run_server()
